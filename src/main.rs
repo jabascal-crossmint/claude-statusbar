@@ -2,7 +2,6 @@ mod colors;
 mod git;
 mod input;
 mod output;
-mod summary;
 mod transcript;
 
 use clap::Parser;
