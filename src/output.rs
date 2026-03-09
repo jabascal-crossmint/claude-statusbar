@@ -8,6 +8,7 @@ pub fn build_output(
     is_worktree: bool,
     model: Option<&str>,
     context_pct: Option<&str>,
+    turn_count: Option<u32>,
 ) -> String {
     let display_dir = Path::new(current_dir)
         .file_name()
@@ -15,8 +16,8 @@ pub fn build_output(
         .unwrap_or(current_dir)
         .to_string();
 
-    // Line 1: [model] context% | directory
-    let model_ctx = build_model_context(model, context_pct);
+    // Line 1: [model] context% 💬turns | directory
+    let model_ctx = build_model_context(model, context_pct, turn_count);
     let line1 = format!("{}{}| {}{}{}", model_ctx, GRAY, CYAN, display_dir, RESET);
 
     // Line 2: ⎇ branch_name
@@ -39,7 +40,11 @@ pub fn build_output(
     vec![line1, line2].join("\n")
 }
 
-fn build_model_context(model: Option<&str>, context_pct: Option<&str>) -> String {
+fn build_model_context(
+    model: Option<&str>,
+    context_pct: Option<&str>,
+    turn_count: Option<u32>,
+) -> String {
     let mut parts: Vec<String> = Vec::new();
 
     if let Some(model_name) = model {
@@ -51,6 +56,11 @@ fn build_model_context(model: Option<&str>, context_pct: Option<&str>) -> String
         let pct_num: f64 = pct.parse().unwrap_or(0.0);
         let pct_color = context_color(pct_num);
         parts.push(format!("{}{:.0}%{}", pct_color, pct_num, RESET));
+    }
+
+    if let Some(turns) = turn_count {
+        let color = turn_color(turns);
+        parts.push(format!("{}💬 {}{}", color, turns, RESET));
     }
 
     if parts.is_empty() {
@@ -95,5 +105,18 @@ fn context_color(pct: f64) -> &'static str {
         YELLOW
     } else {
         GRAY
+    }
+}
+
+/// Color based on turn count.
+/// Derived from insight: "Use /clear after ~33 turns to save tokens"
+/// green=<22, yellow=22-33, red=>33
+fn turn_color(turns: u32) -> &'static str {
+    if turns > 33 {
+        RED
+    } else if turns >= 22 {
+        YELLOW
+    } else {
+        GREEN
     }
 }

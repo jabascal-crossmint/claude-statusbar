@@ -9,7 +9,7 @@ use colors::*;
 use git::exec;
 use input::Input;
 use output::build_output;
-use transcript::get_context_pct;
+use transcript::{get_context_pct, get_turn_count};
 
 use std::env;
 use std::io::{self, Read};
@@ -50,11 +50,15 @@ fn main() -> anyhow::Result<()> {
     let git_dir = exec("git", &["rev-parse", "--git-common-dir"], Some(&current_dir));
     let is_worktree = git_dir.contains("/.git/worktrees/");
 
-    // Context percentage
+    // Context percentage and turn count
     let context_pct = input
         .transcript_path
         .as_ref()
         .and_then(|p| get_context_pct(p));
+    let turn_count = input
+        .transcript_path
+        .as_ref()
+        .and_then(|p| get_turn_count(p));
 
     // Build and print output
     let output = build_output(
@@ -66,6 +70,7 @@ fn main() -> anyhow::Result<()> {
             .as_ref()
             .and_then(|m| m.display_name.as_deref()),
         context_pct.as_deref(),
+        turn_count,
     );
 
     print!("{}", output);
