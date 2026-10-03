@@ -2,10 +2,14 @@ use crate::colors::*;
 use std::env;
 use std::path::Path;
 
+pub struct GitInfo {
+    pub branch: String,
+    pub is_worktree: bool,
+}
+
 pub fn build_output(
     current_dir: &str,
-    branch: &str,
-    is_worktree: bool,
+    git: Option<&GitInfo>,
     model: Option<&str>,
     context_pct: Option<&str>,
     turn_count: Option<u32>,
@@ -20,9 +24,12 @@ pub fn build_output(
     let model_ctx = build_model_context(model, context_pct, turn_count);
     let line1 = format!("{}{}| {}{}{}", model_ctx, GRAY, CYAN, display_dir, RESET);
 
-    // Line 2: ⎇ branch_name
-    let branch_color = if is_worktree { MAGENTA } else { GREEN };
-    let branch_display = if is_worktree {
+    // Line 2 (git repos only): branch name
+    let Some(GitInfo { branch, is_worktree }) = git else {
+        return line1;
+    };
+    let branch_color = if *is_worktree { MAGENTA } else { GREEN };
+    let branch_display = if *is_worktree {
         let dir_name = Path::new(current_dir)
             .file_name()
             .and_then(|n| n.to_str())
@@ -33,7 +40,7 @@ pub fn build_output(
             format!("{}↟", branch)
         }
     } else {
-        branch.to_string()
+        branch.clone()
     };
     let line2 = format!("{}🌿 {}{}", branch_color, branch_display, RESET);
 

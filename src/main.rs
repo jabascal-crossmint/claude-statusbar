@@ -8,10 +8,9 @@ use clap::Parser;
 use colors::*;
 use git::exec;
 use input::Input;
-use output::build_output;
+use output::{build_output, GitInfo};
 use transcript::{get_context_pct, get_turn_count};
 
-use std::env;
 use std::io::{self, Read};
 
 #[derive(Parser)]
@@ -33,22 +32,20 @@ fn main() -> anyhow::Result<()> {
         return Ok(());
     };
 
-    // Check if git repo
-    if exec(
+    // Git info is optional: model/context/turns are shown everywhere
+    let in_git = exec(
         "git",
         &["rev-parse", "--is-inside-work-tree"],
         Some(&current_dir),
-    ) != "true"
-    {
-        let display = current_dir.replace(&env::var("HOME").unwrap_or_default(), "~");
-        print!("{}{}{}", CYAN, display, RESET);
-        return Ok(());
-    }
-
-    // Gather git info
-    let branch = exec("git", &["branch", "--show-current"], Some(&current_dir));
-    let git_dir = exec("git", &["rev-parse", "--git-common-dir"], Some(&current_dir));
-    let is_worktree = git_dir.contains("/.git/worktrees/");
+    ) == "true";
+    let git = in_git.then(|| {
+        let branch = exec("git", &["branch", "--show-current"], Some(&current_dir));
+        let git_dir = exec("git", &["rev-parse", "--git-common-dir"], Some(&current_dir));
+        GitInfo {
+            branch,
+            is_worktree: git_dir.contains("/.git/worktrees/"),
+        }
+    });
 
     // Context percentage and turn count
     let context_pct = input
@@ -63,8 +60,7 @@ fn main() -> anyhow::Result<()> {
     // Build and print output
     let output = build_output(
         &current_dir,
-        &branch,
-        is_worktree,
+        git.as_ref(),
         input
             .model
             .as_ref()
