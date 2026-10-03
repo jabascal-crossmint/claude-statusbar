@@ -9,7 +9,7 @@ use colors::*;
 use git::exec;
 use input::Input;
 use output::{build_output, GitInfo};
-use transcript::{get_context_pct, get_turn_count};
+use transcript::get_turn_count;
 
 use std::io::{self, Read};
 
@@ -47,11 +47,18 @@ fn main() -> anyhow::Result<()> {
         }
     });
 
-    // Context percentage and turn count
+    // Context percentage comes straight from Claude Code; turn count from the transcript
     let context_pct = input
-        .transcript_path
+        .context_window
         .as_ref()
-        .and_then(|p| get_context_pct(p));
+        .and_then(|c| c.used_percentage)
+        .map(|pct| {
+            if pct >= 90.0 {
+                format!("{:.1}", pct)
+            } else {
+                format!("{}", pct.round() as u32)
+            }
+        });
     let turn_count = input
         .transcript_path
         .as_ref()
